@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inmuebles Sist — Gestión de Inversiones</title>
+  <meta name="description" content="Dashboard para gestionar inversiones inmobiliarias en departamentos en pozo" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="index.css" />
+  <!-- xlsx-js-style para exportación Excel con formato -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- ===== PANTALLA DE AUTENTICACIÓN (cubre todo hasta que el usuario se loguee) ===== -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-brand-icon">🏢</span>
+        <div>
+          <div class="auth-brand-name">Inmuebles Sist</div>
+          <div class="auth-brand-sub">Gestión de Inversiones</div>
+        </div>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="authTabLogin" onclick="Auth.showTab('login')">Ingresar</button>
+        <button class="auth-tab" id="authTabSignup" onclick="Auth.showTab('signup')">Crear cuenta</button>
+      </div>
+
+      <div class="auth-error" id="authError" style="display:none"></div>
+
+      <div class="form-group">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" placeholder="tu@email.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="authPassword">Contraseña</label>
+        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div id="authSignupExtra" style="display:none">
+        <div class="form-group">
+          <label for="authPasswordConfirm">Confirmar contraseña</label>
+          <input type="password" id="authPasswordConfirm" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary auth-submit-btn" id="authSubmitBtn" onclick="Auth.submit()">
+        Ingresar
+      </button>
+
+      <p class="auth-footer-note">
+        Tus datos se sincronizan automáticamente entre todos tus dispositivos.
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <span class="brand-icon">🏢</span>
+        <div>
+          <div class="brand-name">Inmuebles Sist</div>
+          <div class="brand-sub">Gestión de Inversiones</div>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" title="Cerrar menú">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="resumen" id="navResumen">
+        <span class="nav-icon">📊</span>
+        <span>Resumen</span>
+      </a>
+      <a href="#" class="nav-item" data-view="nueva" id="navNueva">
+        <span class="nav-icon">➕</span>
+        <span>Nueva Inversión</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-investments" id="sidebarInvestments">
+      <div class="sidebar-section-title">Mis Inversiones</div>
+      <div id="sidebarList"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <!-- Usuario logueado -->
+      <div id="sidebarUserInfo" style="display:none">
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar" id="sidebarUserAvatar">?</div>
+          <div class="sidebar-user-email" id="sidebarUserEmail"></div>
+          <button class="sidebar-logout-btn" onclick="Auth.logout()" title="Cerrar sesión">↪</button>
+        </div>
+      </div>
+      <!-- Modo local (sin Firebase) -->
+      <div id="sidebarLocalMode" style="display:none">
+        <div class="sidebar-version">v1.0 · Datos locales</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="layout" id="layout">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" title="Abrir menú">☰</button>
+      <div class="topbar-title" id="topbarTitle">Resumen</div>
+      <div class="topbar-actions" id="topbarActions"></div>
+    </header>
+
+    <!-- Content -->
+    <main class="content" id="mainContent">
+
+      <!-- ========== VIEW: RESUMEN (antes Dashboard) ========== -->
+      <section class="view" id="viewResumen">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Mis Inversiones</h1>
+            <p class="page-sub">Resumen general de todas tus inversiones inmobiliarias</p>
+          </div>
+          <button class="btn btn-primary" onclick="App.showView('nueva')">
+            <span>➕</span> Nueva Inversión
+          </button>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <!-- Investments list -->
+        <div class="section-header">
+          <h2 class="section-title">Portafolio</h2>
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all">Todas</button>
+            <button class="filter-btn" data-filter="activa">Activas</button>
+            <button class="filter-btn" data-filter="finalizada">Finalizadas</button>
+          </div>
+        </div>
+        <div class="investments-grid" id="investmentsGrid"></div>
+        <div class="empty-state" id="emptyState" style="display:none">
+          <div class="empty-icon">🏗️</div>
+          <h3>No hay inversiones registradas</h3>
+          <p>Comenzá creando tu primera inversión inmobiliaria</p>
+          <button class="btn btn-primary" onclick="App.showView('nueva')">Crear primera inversión</button>
+        </div>
+      </section>
+
+      <!-- ========== VIEW: NUEVA INVERSIÓN ========== -->
+      <section class="view" id="viewNueva" style="display:none">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" id="formTitle">Nueva Inversión</h1>
+            <p class="page-sub">Completá los datos del proyecto inmobiliario</p>
+          </div>
+          <button class="btn btn-ghost" onclick="App.showView('resumen')">← Resumen</button>
+        </div>
+
+        <form class="investment-form" id="investmentForm" onsubmit="App.saveInvestment(event)">
+          <input type="hidden" id="editId" />
+
+          <div class="form-grid">
+            <!-- Datos del proyecto -->
+            <div class="form-card">
+              <h3 class="form-card-title">📋 Datos del Proyecto</h3>
+              <div class="form-group">
+                <label for="fNombre">Nombre del proyecto / propiedad *</label>
+                <input type="text" id="fNombre" placeholder="Ej: Edificio Torres del Sol — Dto 3B" required />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fUbicacion">Ubicación *</label>
+                  <input type="text" id="fUbicacion" placeholder="Ej: Palermo, CABA" required />
+                </div>
+                <div class="form-group">
+                  <label for="fM2">Metros cuadrados (m²)</label>
+                  <input type="number" id="fM2" placeholder="Ej: 55" min="0" step="0.01" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="fDireccionExacta">Dirección exacta <span style="color:var(--text-muted);font-weight:400">(opcional — para ver en Google Maps)</span></label>
+                <input type="text" id="fDireccionExacta" placeholder="Ej: Av. Corrientes 1234, Buenos Aires, Argentina" />
+              </div>
+              <div class="form-group">
+                <label for="fEstado">Estado de la inversión</label>
+                <select id="fEstado">
+                  <option value="activa">Activa</option>
+                  <option value="finalizada">Finalizada</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="fNotas">Notas u observaciones</label>
+                <textarea id="fNotas" rows="3" placeholder="Información adicional sobre la propiedad..."></textarea>
+              </div>
+            </div>
+
+            <!-- Valores financieros -->
+            <div class="form-card">
+              <h3 class="form-card-title">💰 Valores Financieros</h3>
+              <div class="form-group">
+                <label for="fValorTotal">Valor total de la propiedad *</label>
+                <div class="input-prefix">
+                  <span>$</span>
+                  <input type="number" id="fValorTotal" placeholder="0" min="0" step="0.01" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="fAnticipo">Anticipo pagado</label>
+                <div class="input-prefix">
+                  <span>$</span>
+                  <input type="number" id="fAnticipo" placeholder="0" min="0" step="0.01" value="0" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fCantCuotas">Total de cuotas *</label>
+                  <input type="number" id="fCantCuotas" placeholder="Ej: 36" min="1" required />
+                </div>
+                <div class="form-group">
+                  <label for="fValorCuota">Valor por cuota *</label>
+                  <div class="input-prefix">
+                    <span>$</span>
+                    <input type="number" id="fValorCuota" placeholder="0" min="0" step="0.01" required />
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="fValorVenta">Valor de venta potencial <span style="color:var(--text-muted);font-weight:400">(opcional — para calcular rentabilidad)</span></label>
+                <div class="input-prefix">
+                  <span>$</span>
+                  <input type="number" id="fValorVenta" placeholder="Ej: 160000" min="0" step="0.01" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fFechaInicio">Fecha de inicio del plan</label>
+                  <input type="date" id="fFechaInicio" />
+                </div>
+                <div class="form-group">
+                  <label for="fFechaFin">Fecha estimada de finalización</label>
+                  <input type="date" id="fFechaFin" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" onclick="App.showView('resumen')">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardar">
+              <span>💾</span> Guardar Inversión
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ========== VIEW: DETALLE DE INVERSIÓN ========== -->
+      <section class="view" id="viewDetalle" style="display:none">
+        <!-- Header de la inversión -->
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" id="detNombre">—</h1>
+            <p class="page-sub" id="detUbicacion">—</p>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-ghost" onclick="App.showView('resumen')">← Resumen</button>
+            <button class="btn btn-secondary" id="btnExportar" onclick="App.exportExcel()" title="Genera un único archivo con una pestaña por cada inversión">
+              <span>📥</span> Exportar Portfolio Excel
+            </button>
+            <button class="btn btn-outline" id="btnEditarInv" onclick="App.editInvestment()">
+              <span>✏️</span> Editar
+            </button>
+          </div>
+        </div>
+
+        <!-- KPIs de la inversión -->
+        <div class="detail-kpi" id="detKpi"></div>
+
+        <!-- Barra de progreso -->
+        <div class="progress-card" id="detProgress"></div>
+
+        <!-- Info + Acciones -->
+        <div class="detail-grid">
+          <div class="detail-info-card" id="detInfo"></div>
+          <div class="detail-action-card" id="detAction"></div>
+        </div>
+
+        <!-- Historial de cuotas -->
+        <div class="cuotas-card">
+          <div class="cuotas-header">
+            <h3>📋 Cronograma de Cuotas</h3>
+            <div class="cuotas-filters">
+              <button class="filter-btn active" data-cuota-filter="all">Todas</button>
+              <button class="filter-btn" data-cuota-filter="pagada">Pagadas</button>
+              <button class="filter-btn" data-cuota-filter="pendiente">Pendientes</button>
+            </div>
+          </div>
+          <div id="cuotasTable"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== MODAL: REGISTRAR PAGO ===== -->
+  <div class="modal-overlay" id="modalPago" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>💳 Registrar Pago</h3>
+        <button class="modal-close" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-cuota-info" id="modalCuotaInfo"></div>
+        <div class="form-group">
+          <label for="mFechaPago">Fecha de pago</label>
+          <input type="date" id="mFechaPago" />
+        </div>
+        <div class="form-group">
+          <label for="mMontoPago">Monto pagado *</label>
+          <div class="input-prefix">
+            <span>$</span>
+            <input type="number" id="mMontoPago" placeholder="0" min="0" step="0.01" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mNotaPago">Nota (opcional)</label>
+          <input type="text" id="mNotaPago" placeholder="Ej: transferencia banco..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="App.closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.confirmPago()">✅ Confirmar Pago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: CONFIRMAR ELIMINAR ===== -->
+  <div class="modal-overlay" id="modalEliminar" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>⚠️ Eliminar Inversión</h3>
+        <button class="modal-close" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de que querés eliminar esta inversión? Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="App.closeModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="App.confirmEliminar()">🗑️ Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="firebase-config.js"></script>
+  <script src="data.js"></script>
+  <script src="excel.js"></script>
+  <script src="app.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>
