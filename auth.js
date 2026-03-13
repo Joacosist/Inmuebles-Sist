@@ -145,7 +145,8 @@ const Auth = (() => {
       }
     });
 
-    if (!window.FIREBASE_ENABLED) {
+    if (!FIREBASE_ENABLED) {
+
       hideAuthScreen();
       const localEl = $('sidebarLocalMode');
       if (localEl) localEl.style.display = '';
