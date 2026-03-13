@@ -145,6 +145,11 @@ const Auth = (() => {
     if (avatarEl) avatarEl.textContent = user.email.charAt(0).toUpperCase();
     if (userInfo) userInfo.style.display = '';
     if (localEl)  localEl.style.display  = 'none';
+    // Topbar user info
+    const topbarUser  = $('topbarUser');
+    const topbarEmail = $('topbarUserEmail');
+    if (topbarUser)  topbarUser.style.display  = '';
+    if (topbarEmail) topbarEmail.textContent   = user.email;
   }
 
   // ── Inicializar ──
