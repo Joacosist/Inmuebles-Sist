@@ -113,7 +113,12 @@
     <header class="topbar">
       <button class="menu-btn" id="menuBtn" title="Abrir menú">☰</button>
       <div class="topbar-title" id="topbarTitle">Resumen</div>
-      <div class="topbar-actions" id="topbarActions"></div>
+     <div class="topbar-actions" id="topbarActions"></div>
+<div id="topbarUser" style="display:none">
+  <span id="topbarUserEmail" style="font-size:13px;color:var(--text-muted);margin-right:8px"></span>
+  <button class="btn btn-ghost" style="font-size:13px;padding:4px 10px" onclick="Auth.logout()" title="Cerrar sesión">Salir ↪</button>
+</div>
+
       <div id="topbarUser" style="display:none">
         <span id="topbarUserEmail" style="font-size:13px;color:var(--text-muted);margin-right:8px"></span>
         <button class="btn btn-ghost" style="font-size:13px;padding:4px 10px" onclick="Auth.logout()" title="Cerrar sesión">Salir ↪</button>

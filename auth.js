@@ -11,11 +11,9 @@ const Auth = (() => {
 
   const $ = id => document.getElementById(id);
 
-  // ── Pantalla de auth ──
   function showAuthScreen() { $('authScreen').style.display = 'flex'; }
   function hideAuthScreen() { $('authScreen').style.display = 'none'; }
 
-  // ── Tabs ──
   function showTab(tab) {
     clearError();
     const isLogin = tab === 'login';
@@ -25,7 +23,6 @@ const Auth = (() => {
     $('authSubmitBtn').textContent = isLogin ? 'Ingresar' : 'Crear cuenta';
   }
 
-  // ── Errores ──
   function showError(msg) {
     const el = $('authError');
     if (!el) return;
@@ -49,7 +46,6 @@ const Auth = (() => {
     }
   }
 
-  // ── Enviar formulario ──
   async function submit() {
     clearError();
     const email    = ($('authEmail').value || '').trim();
@@ -91,7 +87,6 @@ const Auth = (() => {
     return map[code] || `Error al autenticar. Intentá de nuevo. (${code})`;
   }
 
-  // ── Cerrar sesión ──
   async function logout() {
     try {
       localStorage.removeItem('inmuebles_sist_v1');
@@ -102,7 +97,6 @@ const Auth = (() => {
     location.reload();
   }
 
-  // ── Sincronizar datos a la nube ──
   async function syncToCloud() {
     if (!_user || !_db) return;
     const data = JSON.parse(localStorage.getItem('inmuebles_sist_v1') || '{"investments":[]}');
@@ -113,15 +107,12 @@ const Auth = (() => {
     }
   }
 
-  // ── Cargar datos desde la nube ──
   async function loadFromCloud(uid) {
     try {
       const doc = await _db.collection('portfolios').doc(uid).get();
       if (doc.exists) {
-        // Hay datos en la nube → los usamos
         localStorage.setItem('inmuebles_sist_v1', JSON.stringify(doc.data()));
       } else {
-        // Usuario nuevo → migrar datos locales si existen
         const local = localStorage.getItem('inmuebles_sist_v1');
         if (local) {
           const parsed = JSON.parse(local);
@@ -135,7 +126,6 @@ const Auth = (() => {
     }
   }
 
-  // ── Actualizar sidebar con info del usuario ──
   function updateSidebarUser(user) {
     const emailEl  = $('sidebarUserEmail');
     const avatarEl = $('sidebarUserAvatar');
@@ -145,16 +135,9 @@ const Auth = (() => {
     if (avatarEl) avatarEl.textContent = user.email.charAt(0).toUpperCase();
     if (userInfo) userInfo.style.display = '';
     if (localEl)  localEl.style.display  = 'none';
-    // Topbar user info
-    const topbarUser  = $('topbarUser');
-    const topbarEmail = $('topbarUserEmail');
-    if (topbarUser)  topbarUser.style.display  = '';
-    if (topbarEmail) topbarEmail.textContent   = user.email;
   }
 
-  // ── Inicializar ──
   function init() {
-    // Permitir Enter para enviar el formulario
     document.addEventListener('keydown', e => {
       if (e.key === 'Enter' && $('authScreen') && $('authScreen').style.display !== 'none') {
         e.preventDefault();
@@ -163,7 +146,7 @@ const Auth = (() => {
     });
 
     if (!FIREBASE_ENABLED) {
-      // Sin Firebase → modo local, mostrar app directo
+
       hideAuthScreen();
       const localEl = $('sidebarLocalMode');
       if (localEl) localEl.style.display = '';
@@ -172,7 +155,6 @@ const Auth = (() => {
     }
 
     try {
-      // Evitar inicializar dos veces si la página se recarga en caliente
       const app = firebase.apps.length
         ? firebase.apps[0]
         : firebase.initializeApp(firebaseConfig);
@@ -195,7 +177,6 @@ const Auth = (() => {
       });
     } catch (e) {
       console.error('Error iniciando Firebase:', e);
-      // No ocultar la pantalla de auth — mostrar el error dentro de ella
       showError('No se pudo conectar con Firebase. Verificá tu conexión a internet y recargá la página.');
     }
   }
@@ -207,3 +188,4 @@ const Auth = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', Auth.init);
+
