@@ -49,6 +49,9 @@ const DB = (() => {
       fechaFin:        invData.fechaFin || null,
       estado:          invData.estado || 'activa',
       notas:           invData.notas || '',
+      cancelacionMonto:   parseFloat(invData.cancelacionMonto) || null,
+      cancelacionFecha:   invData.cancelacionFecha || null,
+      cancelacionDespues: parseInt(invData.cancelacionDespues) || null,
       cuotas,
       createdAt:  new Date().toISOString(),
       updatedAt:  new Date().toISOString(),
@@ -67,10 +70,19 @@ const DB = (() => {
     const newCant   = parseInt(invData.cantCuotas)   || existing.cantCuotas;
     const newValor  = parseFloat(invData.valorCuota) || existing.valorCuota;
     const newInicio = invData.fechaInicio             || existing.fechaInicio;
+    const newCancelMonto   = parseFloat(invData.cancelacionMonto) || null;
+    const newCancelFecha   = invData.cancelacionFecha || null;
+    const newCancelDespues = parseInt(invData.cancelacionDespues) || null;
 
     let cuotas = existing.cuotas;
-    if (newCant !== existing.cantCuotas || newValor !== existing.valorCuota || newInicio !== existing.fechaInicio) {
-      cuotas = regenerateCuotas(existing.cuotas, { cantCuotas: newCant, valorCuota: newValor, fechaInicio: newInicio });
+    const cancelChanged = newCancelMonto !== existing.cancelacionMonto ||
+      newCancelFecha !== existing.cancelacionFecha ||
+      newCancelDespues !== existing.cancelacionDespues;
+    if (newCant !== existing.cantCuotas || newValor !== existing.valorCuota || newInicio !== existing.fechaInicio || cancelChanged) {
+      cuotas = regenerateCuotas(existing.cuotas, {
+        cantCuotas: newCant, valorCuota: newValor, fechaInicio: newInicio,
+        cancelacionMonto: newCancelMonto, cancelacionFecha: newCancelFecha, cancelacionDespues: newCancelDespues,
+      });
     }
 
     db.investments[idx] = {
@@ -88,6 +100,9 @@ const DB = (() => {
       fechaFin:        invData.fechaFin || existing.fechaFin,
       estado:          invData.estado   || existing.estado,
       notas:           invData.notas    || '',
+      cancelacionMonto:   newCancelMonto,
+      cancelacionFecha:   newCancelFecha,
+      cancelacionDespues: newCancelDespues,
       cuotas,
       updatedAt: new Date().toISOString(),
     };
@@ -109,6 +124,10 @@ const DB = (() => {
     const cant   = parseInt(invData.cantCuotas) || 0;
     const valor  = parseFloat(invData.valorCuota) || 0;
     const inicio = invData.fechaInicio ? new Date(invData.fechaInicio + 'T12:00:00') : null;
+    const cancelMonto   = parseFloat(invData.cancelacionMonto) || 0;
+    const cancelFecha   = invData.cancelacionFecha || null;
+    const cancelDespues = parseInt(invData.cancelacionDespues) || 0;
+    const tieneCancelacion = cancelMonto > 0 && cancelDespues > 0 && cancelDespues < cant;
 
     for (let i = 1; i <= cant; i++) {
       let fechaProgramada = null;
@@ -117,15 +136,10 @@ const DB = (() => {
         d.setMonth(d.getMonth() + (i - 1));
         fechaProgramada = d.toISOString().split('T')[0];
       }
-      cuotas.push({
-        numero: i,
-        fechaProgramada,
-        monto:       valor,
-        estado:      'pendiente',
-        fechaPago:   null,
-        montoPagado: null,
-        nota:        '',
-      });
+      cuotas.push({ numero: i, fechaProgramada, monto: valor, estado: 'pendiente', fechaPago: null, montoPagado: null, nota: '' });
+      if (tieneCancelacion && i === cancelDespues) {
+        cuotas.push({ numero: cancelDespues + 0.5, tipo: 'cancelacion', fechaProgramada: cancelFecha, monto: cancelMonto, estado: 'pendiente', fechaPago: null, montoPagado: null, nota: '' });
+      }
     }
     return cuotas;
   }
@@ -133,6 +147,10 @@ const DB = (() => {
   function regenerateCuotas(existingCuotas, opts) {
     const cuotas = [];
     const inicio = opts.fechaInicio ? new Date(opts.fechaInicio + 'T12:00:00') : null;
+    const cancelMonto   = parseFloat(opts.cancelacionMonto) || 0;
+    const cancelFecha   = opts.cancelacionFecha || null;
+    const cancelDespues = parseInt(opts.cancelacionDespues) || 0;
+    const tieneCancelacion = cancelMonto > 0 && cancelDespues > 0 && cancelDespues < opts.cantCuotas;
 
     for (let i = 1; i <= opts.cantCuotas; i++) {
       const existing = existingCuotas.find(c => c.numero === i);
@@ -146,6 +164,14 @@ const DB = (() => {
         cuotas.push({ ...existing, fechaProgramada, monto: opts.valorCuota });
       } else {
         cuotas.push({ numero: i, fechaProgramada, monto: opts.valorCuota, estado: 'pendiente', fechaPago: null, montoPagado: null, nota: '' });
+      }
+      if (tieneCancelacion && i === cancelDespues) {
+        const existingCancel = existingCuotas.find(c => c.tipo === 'cancelacion');
+        if (existingCancel && existingCancel.estado === 'pagada') {
+          cuotas.push({ ...existingCancel, fechaProgramada: cancelFecha, monto: cancelMonto });
+        } else {
+          cuotas.push({ numero: cancelDespues + 0.5, tipo: 'cancelacion', fechaProgramada: cancelFecha, monto: cancelMonto, estado: 'pendiente', fechaPago: null, montoPagado: null, nota: '' });
+        }
       }
     }
     return cuotas;

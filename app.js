@@ -441,15 +441,18 @@ const App = (() => {
     const actionEl = document.getElementById('detAction');
     let payHtml = '';
     if (next) {
+      const nextEsCancelacion = next.tipo === 'cancelacion';
+      const nextLabel = nextEsCancelacion ? 'Pago de Cancelación' : `Cuota ${next.numero} de ${inv.cantCuotas}`;
+      const nextBtnLabel = nextEsCancelacion ? '💲 Registrar Pago de Cancelación' : `💳 Registrar Pago de Cuota ${next.numero}`;
       payHtml = `
         <h3>💳 Próximo Pago</h3>
         <div class="next-payment-box">
-          <div class="next-payment-label">Cuota ${next.numero} de ${inv.cantCuotas}</div>
+          <div class="next-payment-label">${nextLabel}</div>
           <div class="next-payment-cuota">${fmt$(next.monto)}</div>
           <div class="next-payment-date">${next.fechaProgramada ? 'Programada: ' + fmtDate(next.fechaProgramada) : 'Sin fecha programada'}</div>
         </div>
         <button class="btn btn-primary btn-pagar" onclick="App.openPago('${inv.id}', ${next.numero})">
-          💳 Registrar Pago de Cuota ${next.numero}
+          ${nextBtnLabel}
         </button>
         <div style="margin-top:12px;font-size:12px;color:var(--text-secondary);text-align:center">
           También podés pagar cualquier cuota desde el cronograma
@@ -499,9 +502,13 @@ const App = (() => {
       return;
     }
 
-    const rows = cuotas.map(c => `
-      <tr class="${c.estado}">
-        <td><div class="cuota-num ${c.estado}">${c.numero}</div></td>
+    const rows = cuotas.map(c => {
+      const esCancelacion = c.tipo === 'cancelacion';
+      const label = esCancelacion ? '💲 Cancelación' : c.numero;
+      const rowClass = esCancelacion ? `${c.estado} cancelacion-row` : c.estado;
+      return `
+      <tr class="${rowClass}">
+        <td><div class="cuota-num ${c.estado}" style="${esCancelacion ? 'background:var(--purple);color:#fff;font-size:11px;padding:2px 6px' : ''}">${label}</div></td>
         <td>${fmtDate(c.fechaProgramada)}</td>
         <td><strong>${fmt$(c.monto)}</strong></td>
         <td><span class="status-pill status-${c.estado}">${c.estado === 'pagada' ? '✅ Pagada' : '⏳ Pendiente'}</span></td>
@@ -510,11 +517,11 @@ const App = (() => {
         <td>${c.nota || '—'}</td>
         <td>
           ${c.estado === 'pendiente'
-            ? `<button class="btn btn-primary btn-sm" onclick="App.openPago('${inv.id}', ${c.numero})">Pagar</button>`
+            ? `<button class="btn btn-primary btn-sm" onclick="App.openPago('${inv.id}', ${c.numero})">${esCancelacion ? 'Pagar Cancelación' : 'Pagar'}</button>`
             : `<button class="btn btn-ghost btn-sm" style="color:var(--red-light)" onclick="App.despagarCuota('${inv.id}', ${c.numero})">↩ Revertir</button>`}
         </td>
       </tr>
-    `).join('');
+    `;}).join('');
 
     document.getElementById('cuotasTable').innerHTML = `
       <table class="cuota-table">
@@ -532,6 +539,7 @@ const App = (() => {
   // ==================== FORMULARIO ====================
   function saveInvestment(e) {
     e.preventDefault();
+    const tieneCancelacion = document.getElementById('fTieneCancelacion').checked;
     const data = {
       nombre:              document.getElementById('fNombre').value.trim(),
       ubicacion:           document.getElementById('fUbicacion').value.trim(),
@@ -546,6 +554,9 @@ const App = (() => {
       fechaFin:            document.getElementById('fFechaFin').value,
       estado:              document.getElementById('fEstado').value,
       notas:               document.getElementById('fNotas').value.trim(),
+      cancelacionMonto:    tieneCancelacion ? document.getElementById('fCancelacionMonto').value : null,
+      cancelacionFecha:    tieneCancelacion ? document.getElementById('fCancelacionFecha').value : null,
+      cancelacionDespues:  tieneCancelacion ? document.getElementById('fCancelacionDespues').value : null,
     };
 
     const editId = document.getElementById('editId').value;
@@ -585,13 +596,25 @@ const App = (() => {
     document.getElementById('fFechaFin').value        = inv.fechaFin || '';
     document.getElementById('fEstado').value          = inv.estado;
     document.getElementById('fNotas').value           = inv.notas || '';
+    const tieneCancelacion = !!inv.cancelacionMonto;
+    document.getElementById('fTieneCancelacion').checked          = tieneCancelacion;
+    document.getElementById('cancelacionFields').style.display    = tieneCancelacion ? '' : 'none';
+    document.getElementById('fCancelacionMonto').value            = inv.cancelacionMonto || '';
+    document.getElementById('fCancelacionFecha').value            = inv.cancelacionFecha || '';
+    document.getElementById('fCancelacionDespues').value          = inv.cancelacionDespues || '';
     state.currentInvId = inv.id;
     showView('nueva');
+  }
+
+  function toggleCancelacion() {
+    const checked = document.getElementById('fTieneCancelacion').checked;
+    document.getElementById('cancelacionFields').style.display = checked ? '' : 'none';
   }
 
   function resetForm() {
     document.getElementById('investmentForm').reset();
     document.getElementById('editId').value = '';
+    document.getElementById('cancelacionFields').style.display = 'none';
     state.editMode = false;
   }
 
@@ -606,9 +629,12 @@ const App = (() => {
     document.getElementById('mFechaPago').value = todayISO();
     document.getElementById('mMontoPago').value = cuota.monto;
     document.getElementById('mNotaPago').value  = '';
+    const esCancelacion = cuota.tipo === 'cancelacion';
     document.getElementById('modalCuotaInfo').innerHTML = `
       <strong>${inv.nombre}</strong><br/>
-      Cuota <strong>${cuota.numero}</strong> de ${inv.cantCuotas}
+      ${esCancelacion
+        ? `Pago de <strong>Cancelación</strong>`
+        : `Cuota <strong>${cuota.numero}</strong> de ${inv.cantCuotas}`}
       · Monto original: <strong>${fmt$(cuota.monto)}</strong>
       ${cuota.fechaProgramada ? `· Programada: <strong>${fmtDate(cuota.fechaProgramada)}</strong>` : ''}
     `;
@@ -749,7 +775,7 @@ const App = (() => {
     editInvestment, editInvestmentById,
     openPago, confirmPago, despagarCuota,
     closeModal, promptEliminar, confirmEliminar,
-    exportExcel, setSaleValue, showSaleValueForm,
+    exportExcel, setSaleValue, showSaleValueForm, toggleCancelacion,
   };
 })();
 

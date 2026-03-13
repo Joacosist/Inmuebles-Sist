@@ -162,7 +162,7 @@ const Auth = (() => {
       }
     });
 
-    if (!window.FIREBASE_ENABLED) {
+    if (!FIREBASE_ENABLED) {
       // Sin Firebase → modo local, mostrar app directo
       hideAuthScreen();
       const localEl = $('sidebarLocalMode');
