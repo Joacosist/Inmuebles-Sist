@@ -652,9 +652,18 @@ const App = (() => {
       toast('Ingresá un monto válido', 'error'); return;
     }
 
-    DB.pagarCuota(invId, numeroCuota, { fechaPago, montoPagado, nota });
+    const invActualizado = DB.pagarCuota(invId, numeroCuota, { fechaPago, montoPagado, nota });
     closeModal();
     toast(`✅ Cuota ${numeroCuota} registrada como pagada`);
+
+    if (invActualizado && invActualizado.estado === 'finalizada') {
+      setTimeout(() => {
+        document.getElementById('modalFelicitacionesTitulo').textContent = `¡Felicitaciones, Capitán! 🎉`;
+        document.getElementById('modalFelicitacionesMsg').textContent =
+          `Terminaste de pagar "${invActualizado.nombre}". ¡Una inversión más conquistada! A seguir construyendo el futuro. 💪`;
+        document.getElementById('modalFelicitaciones').style.display = 'flex';
+      }, 600);
+    }
 
 
     if (state.currentView === 'detalle' && state.currentInvId === invId) {
