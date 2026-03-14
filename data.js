@@ -17,7 +17,7 @@ const DB = (() => {
   function save(data) {
     localStorage.setItem(KEY, JSON.stringify(data));
     // Sincronizar en la nube si el usuario está logueado
-    if (window.Auth && typeof Auth.syncToCloud === 'function') Auth.syncToCloud();
+    if (typeof Auth !== 'undefined' && Auth.syncToCloud) Auth.syncToCloud();
   }
 
   // ---------- INVESTMENTS ----------
