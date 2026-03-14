@@ -130,9 +130,14 @@
             <h1 class="page-title">Mis Inversiones</h1>
             <p class="page-sub">Resumen general de todas tus inversiones inmobiliarias</p>
           </div>
-          <button class="btn btn-primary" onclick="App.showView('nueva')">
-            <span>➕</span> Nueva Inversión
-          </button>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-secondary" onclick="App.exportExcel()" title="Exportar portfolio completo a Excel">
+              <span>📥</span> Exportar Excel
+            </button>
+            <button class="btn btn-primary" onclick="App.showView('nueva')">
+              <span>➕</span> Nueva Inversión
+            </button>
+          </div>
         </div>
 
         <!-- KPI cards -->
