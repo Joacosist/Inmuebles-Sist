@@ -626,7 +626,7 @@ const App = (() => {
     if (!cuota) return;
 
     state.pagoTarget = { invId, numeroCuota };
-    document.getElementById('mFechaPago').value = todayISO();
+    document.getElementById('mFechaPago').value = cuota.fechaProgramada || todayISO();
     document.getElementById('mMontoPago').value = cuota.monto;
     document.getElementById('mNotaPago').value  = '';
     const esCancelacion = cuota.tipo === 'cancelacion';
