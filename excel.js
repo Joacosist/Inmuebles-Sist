@@ -318,8 +318,8 @@ const ExcelExporter = (() => {
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!merges'] = merges;
     ws['!cols'] = [
-      { wch: 32 }, { wch: 22 }, { wch: 7  }, { wch: 18 }, { wch: 16 },
-      { wch: 22 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
+      { wch: 32 }, { wch: 22 }, { wch: 12 }, { wch: 18 }, { wch: 16 },
+      { wch: 24 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
       { wch: 18 },
     ];
     ws['!rows'] = [
