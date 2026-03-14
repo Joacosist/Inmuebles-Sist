@@ -656,13 +656,6 @@ const App = (() => {
     closeModal();
     toast(`✅ Cuota ${numeroCuota} registrada como pagada`);
 
-    // Exportar Excel (único archivo) automáticamente
-    try {
-      ExcelExporter.export();
-      toast('📥 Portfolio Excel actualizado', 'info', 3500);
-    } catch (err) {
-      console.warn('Error exportando Excel:', err);
-    }
 
     if (state.currentView === 'detalle' && state.currentInvId === invId) {
       state.cuotaFilter = 'all';
