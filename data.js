@@ -235,15 +235,27 @@ const DB = (() => {
     const totalPagado  = allStats.reduce((s, st) => s + st.totalPagado, 0);
     const totalRestante = allStats.reduce((s, st) => s + st.saldoRestante, 0);
     const activas      = investments.filter(i => i.estado === 'activa').length;
+    const vendidas     = investments.filter(i => i.estado === 'vendida').length;
 
-    // ROI global: sólo inversiones con valor de venta cargado
-    const invConVenta  = investments.filter(i => i.valorVentaPotencial);
-    const totalVenta   = invConVenta.reduce((s, i) => s + i.valorVentaPotencial, 0);
+    // Ganancia estimada: inversiones NO vendidas con valor de venta cargado
+    const invConVenta    = investments.filter(i => i.valorVentaPotencial && i.estado !== 'vendida');
+    const totalVenta     = invConVenta.reduce((s, i) => s + i.valorVentaPotencial, 0);
     const totalBaseVenta = invConVenta.reduce((s, i) => s + i.valorTotal, 0);
-    const gananciaTotal = totalVenta - totalBaseVenta;
-    const roiGlobal = totalBaseVenta > 0 ? (gananciaTotal / totalBaseVenta) * 100 : null;
+    const gananciaTotal  = totalVenta - totalBaseVenta;
+    const roiGlobal      = totalBaseVenta > 0 ? (gananciaTotal / totalBaseVenta) * 100 : null;
 
-    return { totalValor, totalPagado, totalRestante, activas, total: investments.length, gananciaTotal, roiGlobal, invConVenta: invConVenta.length };
+    // Ganancia obtenida: inversiones vendidas con valor de venta cargado
+    const invVendidas        = investments.filter(i => i.estado === 'vendida' && i.valorVentaPotencial);
+    const totalVentaObtenida = invVendidas.reduce((s, i) => s + i.valorVentaPotencial, 0);
+    const totalBaseVendidas  = invVendidas.reduce((s, i) => s + i.valorTotal, 0);
+    const gananciaObtenida   = totalVentaObtenida - totalBaseVendidas;
+    const roiVendidas        = totalBaseVendidas > 0 ? (gananciaObtenida / totalBaseVendidas) * 100 : null;
+
+    return {
+      totalValor, totalPagado, totalRestante, activas, vendidas, total: investments.length,
+      gananciaTotal, roiGlobal, invConVenta: invConVenta.length,
+      gananciaObtenida, roiVendidas, invVendidas: invVendidas.length,
+    };
   }
 
   return { getAll, getById, create, update, remove, pagarCuota, getStats, getGlobalStats };

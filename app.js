@@ -73,7 +73,7 @@ const App = (() => {
     }
     investments.forEach(inv => {
       const stats = DB.getStats(inv);
-      const color = inv.estado === 'activa' ? 'var(--green)' : 'var(--text-muted)';
+      const color = inv.estado === 'activa' ? 'var(--green)' : inv.estado === 'vendida' ? 'var(--purple)' : 'var(--text-muted)';
       const item  = document.createElement('div');
       item.className = 'sidebar-inv-item' + (state.currentInvId === inv.id ? ' active' : '');
       item.innerHTML = `
@@ -131,12 +131,24 @@ const App = (() => {
       const roiColor  = gs.gananciaTotal >= 0 ? 'var(--green-light)' : 'var(--red-light)';
       const roiIcon   = gs.gananciaTotal >= 0 ? '📈' : '📉';
       const roiBgIcon = gs.gananciaTotal >= 0 ? 'var(--green-glow)' : 'var(--red-glow)';
-      roiKpi = `
+      roiKpi += `
         <div class="kpi-card">
           <div class="kpi-icon" style="background:${roiBgIcon}">${roiIcon}</div>
           <div class="kpi-label">Ganancia Estimada</div>
           <div class="kpi-value" style="font-size:20px;color:${roiColor}">${fmt$(gs.gananciaTotal)}</div>
           <div class="kpi-sub">ROI: ${gs.roiGlobal != null ? fmtPct(gs.roiGlobal) : '—'} · ${gs.invConVenta} inv.</div>
+        </div>
+      `;
+    }
+    if (gs.invVendidas > 0) {
+      const roiColor  = gs.gananciaObtenida >= 0 ? 'var(--green-light)' : 'var(--red-light)';
+      const roiBgIcon = gs.gananciaObtenida >= 0 ? 'var(--green-glow)' : 'var(--red-glow)';
+      roiKpi += `
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:${roiBgIcon}">🏷️</div>
+          <div class="kpi-label">Ganancia Obtenida</div>
+          <div class="kpi-value" style="font-size:20px;color:${roiColor}">${fmt$(gs.gananciaObtenida)}</div>
+          <div class="kpi-sub">ROI: ${gs.roiVendidas != null ? fmtPct(gs.roiVendidas) : '—'} · ${gs.invVendidas} vendida${gs.invVendidas !== 1 ? 's' : ''}</div>
         </div>
       `;
     }
@@ -146,7 +158,7 @@ const App = (() => {
         <div class="kpi-icon" style="background:var(--accent-ghost)">🏢</div>
         <div class="kpi-label">Total Inversiones</div>
         <div class="kpi-value">${gs.total}</div>
-        <div class="kpi-sub">${gs.activas} activa${gs.activas !== 1 ? 's' : ''}</div>
+        <div class="kpi-sub">${gs.activas} activa${gs.activas !== 1 ? 's' : ''}${gs.vendidas > 0 ? ' · ' + gs.vendidas + ' vendida' + (gs.vendidas !== 1 ? 's' : '') : ''}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon" style="background:var(--purple-glow)">💎</div>

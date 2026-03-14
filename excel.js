@@ -161,7 +161,7 @@ const ExcelExporter = (() => {
   function buildResumenGeneral(investments) {
     const rows   = [];
     const merges = [];
-    const COLS   = 10;
+    const COLS   = 11;
     let r = 0;
 
     const gs = DB.getGlobalStats();
@@ -196,9 +196,11 @@ const ExcelExporter = (() => {
       hdr('TOTAL PAGADO',             C.HDR_GREEN),
       hdr('SALDO RESTANTE',           C.HDR_RED),
       hdr('ACTIVAS / TOTAL',          C.HDR_GRAY),
-      gs.invConVenta > 0 ? hdr('GANANCIA ESTIMADA', gs.gananciaTotal >= 0 ? C.HDR_GREEN : C.HDR_RED) : empty(C.BG_ALT),
-      gs.invConVenta > 0 ? hdr('ROI ESTIMADO',      gs.gananciaTotal >= 0 ? C.HDR_GREEN : C.HDR_RED) : empty(C.BG_ALT),
-      empty(C.BG_ALT), empty(C.BG_ALT), empty(C.BG_ALT),
+      gs.invConVenta > 0  ? hdr('GANANCIA ESTIMADA', gs.gananciaTotal >= 0 ? C.HDR_GREEN : C.HDR_RED)    : empty(C.BG_ALT),
+      gs.invConVenta > 0  ? hdr('ROI ESTIMADO',      gs.gananciaTotal >= 0 ? C.HDR_GREEN : C.HDR_RED)    : empty(C.BG_ALT),
+      gs.invVendidas > 0  ? hdr('GANANCIA OBTENIDA', gs.gananciaObtenida >= 0 ? C.HDR_GREEN : C.HDR_RED) : empty(C.BG_ALT),
+      gs.invVendidas > 0  ? hdr('ROI VENDIDAS',      gs.gananciaObtenida >= 0 ? C.HDR_GREEN : C.HDR_RED) : empty(C.BG_ALT),
+      empty(C.BG_ALT), empty(C.BG_ALT),
     ]);
     r++;
 
@@ -225,7 +227,18 @@ const ExcelExporter = (() => {
             border:    borderMed(),
           })
         : empty(C.BG_ALT),
-      empty(C.BG_ALT), empty(C.BG_ALT), empty(C.BG_ALT),
+      gs.invVendidas > 0
+        ? kpiVal(gs.gananciaObtenida, 'n', gs.gananciaObtenida >= 0 ? C.HDR_GREEN : C.HDR_RED, gs.gananciaObtenida >= 0 ? C.PAID_BG : '#FEE2E2')
+        : empty(C.BG_ALT),
+      gs.invVendidas > 0
+        ? cell((gs.roiVendidas || 0).toFixed(1) + '%', 's', {
+            font:      font(13, true, gs.gananciaObtenida >= 0 ? C.HDR_GREEN : C.HDR_RED),
+            fill:      fill(gs.gananciaObtenida >= 0 ? C.PAID_BG : '#FEE2E2'),
+            alignment: align('center', 'center'),
+            border:    borderMed(),
+          })
+        : empty(C.BG_ALT),
+      empty(C.BG_ALT), empty(C.BG_ALT),
     ]);
     r++;
 
@@ -243,6 +256,7 @@ const ExcelExporter = (() => {
       hdr('AVANCE %',         C.HDR_BLUE),
       hdr('VALOR DE VENTA',   C.HDR_PURPLE),
       hdr('ESTADO',           C.HDR_GRAY),
+      empty(C.BG_ALT),
     ]);
     r++;
 
@@ -254,7 +268,9 @@ const ExcelExporter = (() => {
     investments.forEach((inv, idx) => {
       const stats = DB.getStats(inv);
       const bg    = idx % 2 === 0 ? C.WHITE : C.BG_ALT;
-      const isPaid = inv.estado === 'finalizada';
+      const estadoLabel = inv.estado === 'finalizada' ? '✔ FINALIZADA' : inv.estado === 'vendida' ? '🏷️ VENDIDA' : '● ACTIVA';
+      const estadoColor = inv.estado === 'finalizada' ? C.MUTED : inv.estado === 'vendida' ? C.PURPLE : C.GREEN;
+      const estadoBg    = inv.estado === 'vendida' ? (idx % 2 === 0 ? '#FAF5FF' : '#EDE9FE') : inv.estado === 'finalizada' ? bg : (idx % 2 === 0 ? '#F0FDF4' : '#DCFCE7');
       totalValorSum  += inv.valorTotal;
       totalPagadoSum += stats.totalPagado;
       totalSaldoSum  += stats.saldoRestante;
@@ -276,12 +292,13 @@ const ExcelExporter = (() => {
         inv.valorVentaPotencial
           ? cur(inv.valorVentaPotencial, C.PURPLE, idx % 2 === 0 ? '#FAF5FF' : '#EDE9FE')
           : txtC('—', C.MUTED, bg),
-        cell(isPaid ? '✔ FINALIZADA' : '● ACTIVA', 's', {
-          font:      font(10, true, isPaid ? C.MUTED : C.GREEN),
-          fill:      fill(isPaid ? bg : (idx % 2 === 0 ? '#F0FDF4' : '#DCFCE7')),
+        cell(estadoLabel, 's', {
+          font:      font(10, true, estadoColor),
+          fill:      fill(estadoBg),
           alignment: align('center', 'center'),
           border:    border(),
         }),
+        empty(bg),
       ]);
       r++;
     });
@@ -294,7 +311,7 @@ const ExcelExporter = (() => {
       empty(C.HDR_BLUE),
       cur(totalPagadoSum, C.WHITE, C.HDR_GREEN),
       cur(totalSaldoSum,  C.WHITE, C.HDR_RED),
-      empty(C.HDR_BLUE), empty(C.HDR_BLUE), empty(C.HDR_BLUE),
+      empty(C.HDR_BLUE), empty(C.HDR_BLUE), empty(C.HDR_BLUE), empty(C.HDR_BLUE),
     ]);
     r++;
 
@@ -302,7 +319,8 @@ const ExcelExporter = (() => {
     ws['!merges'] = merges;
     ws['!cols'] = [
       { wch: 32 }, { wch: 22 }, { wch: 7  }, { wch: 18 }, { wch: 16 },
-      { wch: 18 }, { wch: 17 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
+      { wch: 22 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
+      { wch: 18 },
     ];
     ws['!rows'] = [
       { hpt: 44 }, { hpt: 14 }, { hpt: 8  },
