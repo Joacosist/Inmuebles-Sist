@@ -188,6 +188,7 @@ const DB = (() => {
     cuota.fechaPago   = pagoData.fechaPago;
     cuota.montoPagado = parseFloat(pagoData.montoPagado) || cuota.monto;
     cuota.nota        = pagoData.nota || '';
+    cuota.comprobante = pagoData.comprobante || null;
 
     if (inv.cuotas.every(c => c.estado === 'pagada')) inv.estado = 'finalizada';
     inv.updatedAt = new Date().toISOString();

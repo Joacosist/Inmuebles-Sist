@@ -530,7 +530,10 @@ const App = (() => {
         <td>
           ${c.estado === 'pendiente'
             ? `<button class="btn btn-primary btn-sm" onclick="App.openPago('${inv.id}', ${c.numero})">${esCancelacion ? 'Pagar Cancelación' : 'Pagar'}</button>`
-            : `<button class="btn btn-ghost btn-sm" style="color:var(--red-light)" onclick="App.despagarCuota('${inv.id}', ${c.numero})">↩ Revertir</button>`}
+            : `<div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" style="color:var(--red-light)" onclick="App.despagarCuota('${inv.id}', ${c.numero})">↩ Revertir</button>
+                ${c.comprobante ? `<button class="btn btn-ghost btn-sm" onclick="App.verComprobante('${inv.id}', ${c.numero})">🧾 Ver</button>` : ''}
+               </div>`}
         </td>
       </tr>
     `;}).join('');
@@ -641,6 +644,11 @@ const App = (() => {
     document.getElementById('mFechaPago').value = cuota.fechaProgramada || todayISO();
     document.getElementById('mMontoPago').value = cuota.monto;
     document.getElementById('mNotaPago').value  = '';
+    document.getElementById('mComprobante').value = '';
+    document.getElementById('comprobanteText').textContent = '📎 Adjuntar imagen';
+    document.getElementById('comprobanteLabel').classList.remove('tiene-archivo');
+    document.getElementById('comprobantePreview').style.display = 'none';
+    state.comprobanteBase64 = null;
     const esCancelacion = cuota.tipo === 'cancelacion';
     document.getElementById('modalCuotaInfo').innerHTML = `
       <strong>${inv.nombre}</strong><br/>
@@ -651,6 +659,35 @@ const App = (() => {
       ${cuota.fechaProgramada ? `· Programada: <strong>${fmtDate(cuota.fechaProgramada)}</strong>` : ''}
     `;
     document.getElementById('modalPago').style.display = 'flex';
+  }
+
+  function verComprobante(invId, numeroCuota) {
+    const inv = DB.getById(invId);
+    if (!inv) return;
+    const cuota = inv.cuotas.find(c => c.numero === numeroCuota);
+    if (!cuota || !cuota.comprobante) return;
+    const w = window.open('', '_blank');
+    w.document.write(`<html><body style="margin:0;background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh">
+      <img src="${cuota.comprobante}" style="max-width:100%;max-height:100vh;object-fit:contain" />
+    </body></html>`);
+    w.document.close();
+  }
+
+  function onComprobanteChange(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast('El archivo es muy grande (máx 2MB)', 'error'); input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      state.comprobanteBase64 = e.target.result;
+      document.getElementById('comprobanteText').textContent = '✅ ' + file.name;
+      document.getElementById('comprobanteLabel').classList.add('tiene-archivo');
+      if (file.type.startsWith('image/')) {
+        document.getElementById('comprobanteImg').src = e.target.result;
+        document.getElementById('comprobantePreview').style.display = 'block';
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   function confirmPago() {
@@ -664,7 +701,7 @@ const App = (() => {
       toast('Ingresá un monto válido', 'error'); return;
     }
 
-    const invActualizado = DB.pagarCuota(invId, numeroCuota, { fechaPago, montoPagado, nota });
+    const invActualizado = DB.pagarCuota(invId, numeroCuota, { fechaPago, montoPagado, nota, comprobante: state.comprobanteBase64 || null });
     closeModal();
     toast(`✅ Cuota ${numeroCuota} registrada como pagada`);
 
@@ -787,7 +824,7 @@ const App = (() => {
   return {
     init, showView, showDetalle, saveInvestment,
     editInvestment, editInvestmentById,
-    openPago, confirmPago, despagarCuota,
+    openPago, confirmPago, despagarCuota, verComprobante, onComprobanteChange,
     closeModal, promptEliminar, confirmEliminar,
     exportExcel, setSaleValue, showSaleValueForm, toggleCancelacion,
   };

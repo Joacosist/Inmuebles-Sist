@@ -734,6 +734,24 @@ img { display: block; max-width: 100%; }
   gap: 10px;
 }
 
+.comprobante-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: border-color .2s, color .2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.comprobante-upload:hover { border-color: var(--accent); color: var(--accent); }
+.comprobante-upload.tiene-archivo { border-color: var(--green); color: var(--green); }
+
 /* ============================
    ROI / RENTABILIDAD
    ============================ */
