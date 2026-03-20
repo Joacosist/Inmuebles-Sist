@@ -41,25 +41,31 @@ const App = (() => {
 
   // ==================== SIDEBAR ====================
   function initSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const layout  = document.getElementById('layout');
-    const toggle  = document.getElementById('sidebarToggle');
-    const menuBtn = document.getElementById('menuBtn');
-    const isSmall = () => window.innerWidth <= 900;
+    const sidebar  = document.getElementById('sidebar');
+    const layout   = document.getElementById('layout');
+    const toggle   = document.getElementById('sidebarToggle');
+    const menuBtn  = document.getElementById('menuBtn');
+    const overlay  = document.getElementById('sidebarOverlay');
+    const isSmall  = () => window.innerWidth <= 900;
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('visible');
+    }
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('visible');
+    }
 
     toggle.addEventListener('click', () => {
-      if (isSmall()) sidebar.classList.remove('open');
+      if (isSmall()) closeSidebar();
       else { sidebar.classList.toggle('collapsed'); layout.classList.toggle('expanded'); }
     });
     menuBtn.addEventListener('click', () => {
-      if (isSmall()) sidebar.classList.toggle('open');
+      if (isSmall()) sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
       else { sidebar.classList.remove('collapsed'); layout.classList.remove('expanded'); }
     });
-    document.addEventListener('click', (e) => {
-      if (isSmall() && sidebar.classList.contains('open')) {
-        if (!sidebar.contains(e.target) && e.target !== menuBtn) sidebar.classList.remove('open');
-      }
-    });
+    overlay.addEventListener('click', closeSidebar);
   }
 
   function renderSidebar() {
@@ -111,6 +117,12 @@ const App = (() => {
       renderDetalle(invId);
     }
     renderSidebar();
+    // cerrar sidebar en mobile al navegar
+    if (window.innerWidth <= 900) {
+      document.getElementById('sidebar').classList.remove('open');
+      const ov = document.getElementById('sidebarOverlay');
+      if (ov) ov.classList.remove('visible');
+    }
   }
 
   function showDetalle(invId) {
@@ -539,15 +551,17 @@ const App = (() => {
     `;}).join('');
 
     document.getElementById('cuotasTable').innerHTML = `
-      <table class="cuota-table">
-        <thead>
-          <tr>
-            <th>N°</th><th>Fecha programada</th><th>Monto</th><th>Estado</th>
-            <th>Fecha de pago</th><th>Monto pagado</th><th>Nota</th><th>Acción</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div class="cuota-table-wrap">
+        <table class="cuota-table">
+          <thead>
+            <tr>
+              <th>N°</th><th>Fecha programada</th><th>Monto</th><th>Estado</th>
+              <th>Fecha de pago</th><th>Monto pagado</th><th>Nota</th><th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     `;
   }
 
